@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saccadic — RSVP Word Runner</title>
+  <meta name="description" content="Read faster with saccadic (RSVP) rapid serial visual presentation. One word at a time with ORP indicators." />
+
+  <!-- Theme: prevent flash of wrong theme -->
+  <script>
+    (function() {
+      const saved = localStorage.getItem('saccadic-theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
+
+  <!-- Google Font: JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ──────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── CSS Custom Properties (base defaults — themes override) ── */
+    :root {
+      --sacc-font: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+
+      /* Dark theme defaults (matches THEMES.dark) */
+      --sacc-bg:      #0d1117;
+      --sacc-text:    #e6edf3;
+      --sacc-accent:  #ff4444;
+      --sacc-muted:   #7d8590;
+      --sacc-surface: #161b22;
+      --sacc-border:  #30363d;
+      --sacc-line:    #444d56;
+      --sacc-orp:     #ff4444;
+    }
+
+    /* ── Global ────────────────────────────── */
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: var(--sacc-font);
+      background: var(--sacc-bg);
+      color: var(--sacc-text);
+      min-height: 100dvh;
+      transition: background 200ms ease, color 200ms ease;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar       { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--sacc-bg); }
+    ::-webkit-scrollbar-thumb { background: var(--sacc-border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--sacc-muted); }
+
+    /* Text selection */
+    ::selection {
+      background: color-mix(in srgb, var(--sacc-accent) 30%, transparent);
+      color: var(--sacc-text);
+    }
+
+    /* Focus visible */
+    :focus-visible {
+      outline: 2px solid var(--sacc-accent);
+      outline-offset: 2px;
+    }
+
+    /* saccadic-app fills the viewport */
+    saccadic-app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+  </style>
+</head>
+<body>
+  <saccadic-app></saccadic-app>
+  <script type="module" src="./src/components/saccadic-app.js"></script>
+</body>
+</html>
