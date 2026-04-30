@@ -116,6 +116,17 @@ class OrpDisplay extends LitElement {
       letter-spacing: 0.1em;
       min-height: 1.5em;
     }
+
+    /* Mobile (≤ 480px): tighter display */
+    @media (max-width: 480px) {
+      .orp-container {
+        min-height: 90px;
+      }
+      .progress {
+        font-size: 0.75rem;
+        margin-top: 0.625rem;
+      }
+    }
   `;
 
   constructor() {

@@ -75,6 +75,25 @@
       display: flex;
       flex-direction: column;
       min-height: 100dvh;
+      /* Prevent pull-to-refresh and rubber-banding overscroll on mobile */
+      overscroll-behavior: none;
+    }
+
+    /* Touch: disable tap highlight everywhere */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Smooth scroll on mobile */
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* Ensure buttons and interactive elements are comfortable touch targets */
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
     }
   </style>
   <!-- Google tag (gtag.js) -->

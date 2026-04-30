@@ -290,6 +290,66 @@ class SaccadicControls extends LitElement {
       background: var(--sacc-surface);
       font-size: 0.6875rem;
     }
+
+    /* ── Mobile (≤ 480px) ─────────────────── */
+    @media (max-width: 480px) {
+      :host {
+        gap: 0.875rem;
+      }
+
+      /* Mode toggle full width on mobile */
+      .mode-toggle {
+        max-width: 100%;
+      }
+
+      /* WPM slider: tighten gaps */
+      .slider-row {
+        gap: 0.5rem;
+      }
+      input[type="range"] {
+        min-width: 0;
+      }
+
+      /* Button row: 2×2 grid on small screens */
+      .btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+      }
+      .btn-primary {
+        grid-column: 1 / -1;
+        min-width: unset;
+      }
+      .btn-secondary,
+      .btn-ghost {
+        font-size: 0.8125rem;
+        padding: 0.5rem 0.75rem;
+      }
+
+      /* Listen area: tighter padding */
+      .listen-area {
+        padding: 1rem;
+        min-height: 100px;
+      }
+      .listen-btn {
+        padding: 0.65rem 2rem;
+        font-size: 0.9375rem;
+      }
+
+      /* Theme row: smaller text */
+      .theme-row {
+        justify-content: center;
+      }
+      .theme-btn {
+        font-size: 0.6875rem;
+        padding: 0.25rem 0.5rem;
+      }
+
+      /* Keyboard hints hidden on mobile (space bar doesn't apply) */
+      .hint {
+        display: none;
+      }
+    }
   `;
 
   constructor() {
