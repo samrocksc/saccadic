@@ -1,15 +1,17 @@
 /**
  * saccadic-app — root LitElement web component.
- * Wires together: SaccadicReader engine + orp-display + saccadic-controls.
+ * Wires together: SaccadicReader engine + orp-display + saccadic-controls + saved-books-panel.
  * Handles all custom events from child components.
  */
 
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
 import { SaccadicReader } from '../utils/reader.js';
 import { SpeechRecognizer, isSpeechSupported } from '../utils/speech.js';
+import { saveBook, updateBookmark, deleteBook, getBook } from '../utils/store.js';
 import { themeManager } from '../themes/themes.js';
 import './orp-display.js';
 import './saccadic-controls.js';
+import './saved-books-panel.js';
 
 class SaccadicApp extends LitElement {
   static properties = {
@@ -23,6 +25,7 @@ class SaccadicApp extends LitElement {
     _mode:      { type: String,  state: true },  // 'paste' | 'speak'
     _listening: { type: Boolean, state: true },
     _transcript:{ type: String,  state: true },
+    _savedBook: { type: Object,  state: true },  // SavedBook | null
   };
 
   static styles = css`
@@ -41,7 +44,10 @@ class SaccadicApp extends LitElement {
 
     /* Header */
     header {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
     }
     header h1 {
       font-family: var(--sacc-font, monospace);
@@ -58,6 +64,33 @@ class SaccadicApp extends LitElement {
       margin: 0.25rem 0 0;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .saved-btn {
+      font-family: var(--sacc-font, monospace);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid var(--sacc-border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--sacc-muted);
+      cursor: pointer;
+      transition: border-color 120ms ease, color 120ms ease;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .saved-btn:hover {
+      border-color: var(--sacc-accent);
+      color: var(--sacc-accent);
+    }
+    .saved-btn .bookmark-icon {
+      font-size: 0.875rem;
     }
 
     /* Main layout: display on top, controls below */
@@ -104,6 +137,9 @@ class SaccadicApp extends LitElement {
     this._mode       = 'paste';
     this._listening  = false;
     this._transcript = '';
+    this._savedBook  = null;   // null = unsaved / no book loaded
+    this._panelRef   = null;   // refs to child components
+    this._bookmarkDirty = false;
 
     this._reader = new SaccadicReader();
     this._speech = null;
@@ -134,6 +170,15 @@ class SaccadicApp extends LitElement {
       this._speech.stop();
       this._speech = null;
     }
+    // Flush any pending bookmark before unmount
+    if (this._savedBook && this._index > 0) {
+      updateBookmark(this._savedBook.id, this._index);
+    }
+  }
+
+  firstUpdated() {
+    // Cache refs to child components after first render
+    this._panelRef = this.shadowRoot.querySelector('saved-books-panel');
   }
 
   _setupReaderCallbacks() {
@@ -142,13 +187,19 @@ class SaccadicApp extends LitElement {
         this._word    = word;
         this._index   = idx;
         this._playing = true;
+        this._autoSaveBookmark();
       })
       .onEnd(() => {
         this._playing = false;
+        this._flushBookmark();
       })
       .onProgress((idx, total) => {
         this._index = idx;
         this._total = total;
+        // Throttle: save bookmark every 50 words
+        if (idx > 0 && idx % 50 === 0) {
+          this._flushBookmark();
+        }
       });
   }
 
@@ -158,7 +209,6 @@ class SaccadicApp extends LitElement {
     this._speech.onResult(({ transcript, isFinal }) => {
       this._transcript = transcript;
       if (isFinal) {
-        // Append final transcript to accumulated text
         this._accumulatedText += (this._accumulatedText ? ' ' : '') + transcript;
         this._transcript = '';
         this._feedTextToReader(this._accumulatedText);
@@ -169,7 +219,6 @@ class SaccadicApp extends LitElement {
       console.warn('[saccadic] speech error:', error);
       if (this._speech) this._speech.stop();
       this._listening = false;
-      // Notify controls to update its listening state
       this._requestControlsUpdate({ _listening: false });
     });
 
@@ -180,20 +229,37 @@ class SaccadicApp extends LitElement {
   }
 
   _requestControlsUpdate(patch) {
-    // Find the controls element and update its internal state directly
     const controls = this.shadowRoot.querySelector('saccadic-controls');
-    if (controls) {
-      Object.assign(controls, patch);
-    }
+    if (controls) Object.assign(controls, patch);
   }
 
   _feedTextToReader(text) {
-    this._reader.loadText(text);
+    const isReload = this._savedBook !== null;
+    if (isReload) {
+      // Loading a saved book — respect its bookmark
+      this._reader.loadText(text);
+      const startIdx = Math.min(this._savedBook.savedIndex, this._reader.totalWords - 1);
+      this._reader._currentIndex = startIdx;
+      this._reader._words = this._reader._words; // already set by loadText
+    } else {
+      this._reader.loadText(text);
+    }
     this._hasText = this._reader.hasText;
     this._total   = this._reader.totalWords;
     this._word    = '';
-    this._index   = 0;
+    this._index   = isReload ? this._savedBook.savedIndex : 0;
     this._playing = false;
+  }
+
+  _autoSaveBookmark() {
+    this._bookmarkDirty = true;
+  }
+
+  _flushBookmark() {
+    if (this._savedBook && this._bookmarkDirty) {
+      updateBookmark(this._savedBook.id, this._index);
+      this._bookmarkDirty = false;
+    }
   }
 
   // --- Event handlers (events bubble from children) ---
@@ -201,6 +267,7 @@ class SaccadicApp extends LitElement {
   _onTextChanged(e) {
     const { text } = e.detail;
     this._accumulatedText = '';
+    this._savedBook = null;
     this._feedTextToReader(text);
   }
 
@@ -213,8 +280,8 @@ class SaccadicApp extends LitElement {
     this._reader.toggle();
     this._playing = this._reader.playing;
     if (!this._reader.playing) {
-      // show last word while paused
       this._word = this._reader._words[this._reader._currentIndex] || this._word;
+      this._flushBookmark();
     }
   }
 
@@ -230,6 +297,10 @@ class SaccadicApp extends LitElement {
     this._word    = '';
     this._index   = 0;
     this._hasText = this._reader.hasText;
+    if (this._savedBook) {
+      updateBookmark(this._savedBook.id, 0);
+      this._savedBook = { ...this._savedBook, savedIndex: 0 };
+    }
   }
 
   _onThemeChange(e) {
@@ -241,7 +312,6 @@ class SaccadicApp extends LitElement {
   _onModeChange(e) {
     this._mode = e.detail.mode;
     if (this._mode === 'speak') {
-      // Stop playback when switching to speak mode
       this._reader.pause();
       this._playing = false;
     }
@@ -249,12 +319,10 @@ class SaccadicApp extends LitElement {
 
   _onListenClick() {
     if (!this._speech) return;
-
     if (this._listening) {
       this._speech.stop();
       this._listening = false;
     } else {
-      // Reset accumulated text on new session
       this._accumulatedText = '';
       this._transcript = '';
       this._listening = true;
@@ -263,11 +331,66 @@ class SaccadicApp extends LitElement {
     this._requestControlsUpdate({ _listening: this._listening });
   }
 
+  _onPanelToggle() {
+    if (!this._panelRef) return;
+    // Always prefill with current text + suggested title
+    const suggestedTitle = this._savedBook?.title
+      ?? (this._reader.hasText ? `Page ${this._index + 1}` : '');
+    const currentText = this._reader.hasText
+      ? this._reader._words.join(' ')
+      : '';
+    this._panelRef.prefillSave(suggestedTitle, currentText);
+    this._panelRef.open();
+  }
+
+  _onBookLoad(e) {
+    const { id } = e.detail;
+    // Flush current bookmark before switching
+    this._flushBookmark();
+
+    const book = getBook(id);
+    if (!book) return;
+
+    this._savedBook = { ...book };
+    this._feedTextToReader(book.text);
+  }
+
+  _onBookDelete(e) {
+    const { id } = e.detail;
+    deleteBook(id);
+    // If we were reading this book, clear the reference
+    if (this._savedBook?.id === id) {
+      this._savedBook = null;
+    }
+  }
+
+  _onBookSave(e) {
+    const { title, text } = e.detail;
+    const existing = this._savedBook ?? null;
+    const saved = saveBook({
+      id:    existing?.id,
+      title: title || existing?.title || `Untitled`,
+      text,
+    });
+    if (saved) {
+      this._savedBook = { ...saved };
+    }
+  }
+
   render() {
     return html`
       <header>
-        <h1>Saccadic</h1>
-        <p>RSVP Word Runner</p>
+        <div>
+          <h1>Saccadic</h1>
+          <p>RSVP Word Runner</p>
+        </div>
+        <div class="header-right">
+          <button class="saved-btn" @click=${this._onPanelToggle} aria-label="Open saved books">
+            <span class="bookmark-icon">📑</span>
+            Saved
+            ${this._savedBook ? html`<span>·</span><span style="color: var(--sacc-accent)">${this._savedBook.title.slice(0, 12)}${this._savedBook.title.length > 12 ? '…' : ''}</span>` : ''}
+          </button>
+        </div>
       </header>
 
       <div class="display-area">
@@ -295,6 +418,8 @@ class SaccadicApp extends LitElement {
           @listen-click=${this._onListenClick}
         ></saccadic-controls>
       </div>
+
+      <saved-books-panel></saved-books-panel>
 
       <footer>
         <a href="https://github.com/samrocksc/saccadic" target="_blank" rel="noopener">saccadic</a>
