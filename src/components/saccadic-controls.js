@@ -1,18 +1,23 @@
 /**
  * saccadic-controls — LitElement web component for reader controls.
- * Includes: text paste area, WPM slider, play/pause, speed buttons, theme toggle.
+ * Includes: text paste area (Paste mode) or listening button (Speak mode),
+ * WPM slider, play/pause, speed buttons, theme toggle, mode toggle.
  */
 
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
 import { MIN_WPM, MAX_WPM, DEFAULT_WPM, WPM_STEP } from '../utils/reader.js';
+import { isSpeechSupported } from '../utils/speech.js';
 import { THEMES } from '../themes/themes.js';
 
 class SaccadicControls extends LitElement {
   static properties = {
-    wpm:        { type: Number },
-    playing:    { type: Boolean },
-    hasText:    { type: Boolean },
-    theme:      { type: String },
+    wpm:           { type: Number },
+    playing:       { type: Boolean },
+    hasText:       { type: Boolean },
+    theme:         { type: String },
+    _mode:         { type: String, state: true },  // 'paste' | 'speak'
+    _listening:    { type: Boolean, state: true },
+    _transcript:   { type: String, state: true },
   };
 
   static styles = css`
@@ -21,6 +26,45 @@ class SaccadicControls extends LitElement {
       flex-direction: column;
       gap: 1rem;
       width: 100%;
+    }
+
+    /* ── Mode toggle ──────────────────────────── */
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      border: 1px solid var(--sacc-border);
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    .mode-toggle button {
+      flex: 1;
+      font-family: var(--sacc-font, monospace);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 0.45rem 0.75rem;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      background: transparent;
+      color: var(--sacc-muted);
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .mode-toggle button.active {
+      background: var(--sacc-accent);
+      color: #fff;
+    }
+    .mode-toggle button:hover:not(.active) {
+      background: var(--sacc-surface);
+      color: var(--sacc-text);
+    }
+    .mode-toggle button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     /* ── Text input ─────────────────────────── */
@@ -45,6 +89,71 @@ class SaccadicControls extends LitElement {
     }
     textarea::placeholder {
       color: var(--sacc-muted);
+    }
+
+    /* ── Listen button ──────────────────────── */
+    .listen-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      border: 1px solid var(--sacc-border);
+      border-radius: 8px;
+      background: var(--sacc-surface);
+      min-height: 120px;
+      justify-content: center;
+    }
+    .listen-btn {
+      font-family: var(--sacc-font, monospace);
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.75rem 2.5rem;
+      border: 2px solid var(--sacc-accent);
+      border-radius: 999px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--sacc-accent);
+      transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+      letter-spacing: 0.05em;
+    }
+    .listen-btn:hover:not(:disabled) {
+      background: var(--sacc-accent);
+      color: #fff;
+      box-shadow: 0 0 18px color-mix(in srgb, var(--sacc-accent) 50%, transparent);
+    }
+    .listen-btn.listening {
+      background: var(--sacc-accent);
+      color: #fff;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sacc-accent) 60%, transparent); }
+      50%       { box-shadow: 0 0 0 10px color-mix(in srgb, var(--sacc-accent) 0%, transparent); }
+    }
+    .listen-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      animation: none;
+    }
+    .listen-hint {
+      font-family: var(--sacc-font, monospace);
+      font-size: 0.6875rem;
+      color: var(--sacc-muted);
+      text-align: center;
+    }
+    .transcript-preview {
+      font-family: var(--sacc-font, monospace);
+      font-size: 0.8125rem;
+      color: var(--sacc-muted);
+      text-align: center;
+      min-height: 1.2em;
+      max-height: 3.6em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
     }
 
     /* ── Slider row ──────────────────────────── */
@@ -185,10 +294,13 @@ class SaccadicControls extends LitElement {
 
   constructor() {
     super();
-    this.wpm = DEFAULT_WPM;
-    this.playing = false;
-    this.hasText = false;
-    this.theme = 'dark';
+    this.wpm        = DEFAULT_WPM;
+    this.playing    = false;
+    this.hasText    = false;
+    this.theme      = 'dark';
+    this._mode      = 'paste';
+    this._listening = false;
+    this._transcript = '';
   }
 
   _dispatch(name, detail = {}) {
@@ -224,15 +336,73 @@ class SaccadicControls extends LitElement {
     this._dispatch('theme-change', { theme: id });
   }
 
+  _onModeChange(mode) {
+    if (mode === this._mode) return;
+    this._mode = mode;
+    this._dispatch('mode-change', { mode });
+  }
+
+  _onListenClick() {
+    this._dispatch('listen-click');
+  }
+
+  _setListening(v) {
+    this._listening = v;
+  }
+
+  _setTranscript(v) {
+    this._transcript = v;
+  }
+
   render() {
     return html`
-      <!-- Text input -->
-      <textarea
-        placeholder="Paste your text here..."
-        @input=${this._onTextInput}
-        ?disabled=${this.playing}
-        aria-label="Text to read"
-      ></textarea>
+      <!-- Mode toggle -->
+      <div class="mode-toggle">
+        <button
+          class="${this._mode === 'paste' ? 'active' : ''}"
+          @click=${() => this._onModeChange('paste')}
+          ?disabled=${this.playing}
+          aria-pressed=${this._mode === 'paste'}
+        >Paste</button>
+        <button
+          class="${this._mode === 'speak' ? 'active' : ''}"
+          @click=${() => this._onModeChange('speak')}
+          ?disabled=${!isSpeechSupported || this.playing}
+          title=${isSpeechSupported ? 'Speak mode' : 'Speech not supported in this browser'}
+          aria-pressed=${this._mode === 'speak'}
+        >Speak</button>
+      </div>
+
+      <!-- Paste mode: textarea -->
+      ${this._mode === 'paste' ? html`
+        <textarea
+          placeholder="Paste your text here..."
+          @input=${this._onTextInput}
+          ?disabled=${this.playing}
+          aria-label="Text to read"
+        ></textarea>
+      ` : ''}
+
+      <!-- Speak mode: listen button -->
+      ${this._mode === 'speak' ? html`
+        <div class="listen-area">
+          <button
+            class="listen-btn ${this._listening ? 'listening' : ''}"
+            @click=${this._onListenClick}
+            aria-label=${this._listening ? 'Stop listening' : 'Start listening'}
+          >
+            ${this._listening ? '■ Stop' : '🎤  Start Listening'}
+          </button>
+          <div class="transcript-preview">${this._transcript}</div>
+          <div class="listen-hint">
+            ${this._listening
+              ? 'Listening... speak or read aloud'
+              : isSpeechSupported
+                ? 'Click to start · speak or read text aloud'
+                : 'Speech recognition not supported in this browser'}
+          </div>
+        </div>
+      ` : ''}
 
       <!-- WPM slider -->
       <div class="slider-row">

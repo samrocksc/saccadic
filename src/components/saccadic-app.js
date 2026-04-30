@@ -6,6 +6,7 @@
 
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
 import { SaccadicReader } from '../utils/reader.js';
+import { SpeechRecognizer, isSpeechSupported } from '../utils/speech.js';
 import { themeManager } from '../themes/themes.js';
 import './orp-display.js';
 import './saccadic-controls.js';
@@ -19,6 +20,9 @@ class SaccadicApp extends LitElement {
     _total:     { type: Number,  state: true },
     _hasText:   { type: Boolean, state: true },
     _theme:     { type: String,  state: true },
+    _mode:      { type: String,  state: true },  // 'paste' | 'speak'
+    _listening: { type: Boolean, state: true },
+    _transcript:{ type: String,  state: true },
   };
 
   static styles = css`
@@ -90,15 +94,20 @@ class SaccadicApp extends LitElement {
 
   constructor() {
     super();
-    this._wpm     = 250;
-    this._playing = false;
-    this._word    = '';
-    this._index   = 0;
-    this._total   = 0;
-    this._hasText = false;
-    this._theme   = 'dark';
+    this._wpm        = 250;
+    this._playing    = false;
+    this._word       = '';
+    this._index      = 0;
+    this._total      = 0;
+    this._hasText    = false;
+    this._theme      = 'dark';
+    this._mode       = 'paste';
+    this._listening  = false;
+    this._transcript = '';
 
     this._reader = new SaccadicReader();
+    this._speech = null;
+    this._accumulatedText = '';
     this._setupReaderCallbacks();
   }
 
@@ -107,11 +116,24 @@ class SaccadicApp extends LitElement {
     themeManager.init();
     this._theme = themeManager.current;
     this._reader.attachKeyboard();
+    if (isSpeechSupported) {
+      try {
+        this._speech = new SpeechRecognizer();
+        this._setupSpeechEvents();
+      } catch (e) {
+        console.warn('[saccadic] speech recognizer init failed:', e);
+        this._speech = null;
+      }
+    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     this._reader.detachKeyboard();
+    if (this._speech) {
+      this._speech.stop();
+      this._speech = null;
+    }
   }
 
   _setupReaderCallbacks() {
@@ -130,16 +152,56 @@ class SaccadicApp extends LitElement {
       });
   }
 
-  // --- Event handlers (events bubble from children) ---
+  _setupSpeechEvents() {
+    if (!this._speech) return;
 
-  _onTextChanged(e) {
-    const { text } = e.detail;
+    this._speech.onResult(({ transcript, isFinal }) => {
+      this._transcript = transcript;
+      if (isFinal) {
+        // Append final transcript to accumulated text
+        this._accumulatedText += (this._accumulatedText ? ' ' : '') + transcript;
+        this._transcript = '';
+        this._feedTextToReader(this._accumulatedText);
+      }
+    });
+
+    this._speech.onError((error) => {
+      console.warn('[saccadic] speech error:', error);
+      if (this._speech) this._speech.stop();
+      this._listening = false;
+      // Notify controls to update its listening state
+      this._requestControlsUpdate({ _listening: false });
+    });
+
+    this._speech.onEnd(() => {
+      this._listening = false;
+      this._requestControlsUpdate({ _listening: false });
+    });
+  }
+
+  _requestControlsUpdate(patch) {
+    // Find the controls element and update its internal state directly
+    const controls = this.shadowRoot.querySelector('saccadic-controls');
+    if (controls) {
+      Object.assign(controls, patch);
+    }
+  }
+
+  _feedTextToReader(text) {
     this._reader.loadText(text);
     this._hasText = this._reader.hasText;
     this._total   = this._reader.totalWords;
     this._word    = '';
     this._index   = 0;
     this._playing = false;
+  }
+
+  // --- Event handlers (events bubble from children) ---
+
+  _onTextChanged(e) {
+    const { text } = e.detail;
+    this._accumulatedText = '';
+    this._feedTextToReader(text);
   }
 
   _onWpmChanged(e) {
@@ -176,6 +238,31 @@ class SaccadicApp extends LitElement {
     this._theme = theme;
   }
 
+  _onModeChange(e) {
+    this._mode = e.detail.mode;
+    if (this._mode === 'speak') {
+      // Stop playback when switching to speak mode
+      this._reader.pause();
+      this._playing = false;
+    }
+  }
+
+  _onListenClick() {
+    if (!this._speech) return;
+
+    if (this._listening) {
+      this._speech.stop();
+      this._listening = false;
+    } else {
+      // Reset accumulated text on new session
+      this._accumulatedText = '';
+      this._transcript = '';
+      this._listening = true;
+      this._speech.start();
+    }
+    this._requestControlsUpdate({ _listening: this._listening });
+  }
+
   render() {
     return html`
       <header>
@@ -204,6 +291,8 @@ class SaccadicApp extends LitElement {
           @speed-change=${this._onSpeedChange}
           @reset=${this._onReset}
           @theme-change=${this._onThemeChange}
+          @mode-change=${this._onModeChange}
+          @listen-click=${this._onListenClick}
         ></saccadic-controls>
       </div>
 
