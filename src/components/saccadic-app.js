@@ -423,7 +423,6 @@ class SaccadicApp extends LitElement {
 
       <footer>
         <a href="https://github.com/samrocksc/saccadic" target="_blank" rel="noopener">saccadic</a>
-        &nbsp;·&nbsp; no tracking · no account · yours forever
       </footer>
     `;
   }
