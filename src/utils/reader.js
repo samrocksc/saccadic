@@ -5,9 +5,11 @@
 
 import { tokenize, wpmToMs } from './orp.js';
 
-export const DEFAULT_WPM = 250;
-export const MIN_WPM = 100;
-export const MAX_WPM = 1000;
+// WPM range: 150 (8th-grade reading baseline) → 500 (trained speed reader cap).
+// Step of 25 gives 14 stops across the range — fine-grained without feeling stiff.
+export const DEFAULT_WPM = 150;
+export const MIN_WPM = 150;
+export const MAX_WPM = 500;
 export const WPM_STEP = 25;
 
 export class SaccadicReader {

@@ -30,9 +30,10 @@ RSVP (Rapid Serial Visual Presentation) saccadic reading app. One word at a time
 - ORP calculation: left-of-center letter for even-length words
 
 ## WPM Range
-- Min: 100 WPM
-- Max: 1000 WPM
-- Default: 250 WPM
+- Min: 150 WPM (8th grade reading baseline)
+- Max: 500 WPM (trained speed-reader cap)
+- Default: 150 WPM
+- Step (z/x keyboard): 25 WPM
 
 ## Files
 - `index.html` — main entry
