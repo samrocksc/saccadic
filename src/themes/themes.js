@@ -57,9 +57,15 @@ export const THEMES = {
 
 export const DEFAULT_THEME = 'dark';
 
+// localStorage keys — these literals are also referenced by the inline
+// pre-paint script in index.html. Keep both in sync.
+const THEME_KEY = 'saccadic-theme';
+const ORP_COLOR_KEY = 'saccadic-orp-color';
+
 class ThemeManager {
   constructor() {
     this._current = DEFAULT_THEME;
+    this._customOrp = null; // user override; null = use theme default
   }
 
   /** Apply a theme by ID. Updates CSS custom properties on :root. */
@@ -72,7 +78,30 @@ class ThemeManager {
     });
     root.setAttribute('data-theme', themeId);
     this._current = themeId;
-    localStorage.setItem('saccadic-theme', themeId);
+    localStorage.setItem(THEME_KEY, themeId);
+    // Re-apply custom ORP color on top — themes shouldn't clobber user preference
+    if (this._customOrp) {
+      root.style.setProperty('--sacc-orp', this._customOrp);
+    }
+  }
+
+  /**
+   * Set a custom ORP highlight color, overriding the current theme's accent.
+   * Persists across sessions.
+   */
+  setCustomOrpColor(color) {
+    if (!color) return;
+    this._customOrp = color;
+    document.documentElement.style.setProperty('--sacc-orp', color);
+    localStorage.setItem(ORP_COLOR_KEY, color);
+  }
+
+  /** Clear the custom ORP color and restore the active theme's accent. */
+  clearCustomOrpColor() {
+    this._customOrp = null;
+    localStorage.removeItem(ORP_COLOR_KEY);
+    // Re-apply theme to reset --sacc-orp to its theme default
+    this.apply(this._current);
   }
 
   /** Detect system preference and apply. */
@@ -81,9 +110,13 @@ class ThemeManager {
     this.apply(prefersDark ? 'dark' : 'light');
   }
 
-  /** Restore saved theme from localStorage, or apply system default. */
+  /** Restore saved theme + custom ORP color from localStorage, or apply system default. */
   init() {
-    const saved = localStorage.getItem('saccadic-theme');
+    // Load custom orp first so it survives the initial theme apply
+    const savedOrp = localStorage.getItem(ORP_COLOR_KEY);
+    if (savedOrp) this._customOrp = savedOrp;
+
+    const saved = localStorage.getItem(THEME_KEY);
     if (saved && THEMES[saved]) {
       this.apply(saved);
     } else {
@@ -91,13 +124,14 @@ class ThemeManager {
     }
     // Re-apply on system theme change
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (!localStorage.getItem('saccadic-theme')) {
+      if (!localStorage.getItem(THEME_KEY)) {
         this.applySystem();
       }
     });
   }
 
   get current() { return this._current; }
+  get customOrpColor() { return this._customOrp; }
 }
 
 export const themeManager = new ThemeManager();

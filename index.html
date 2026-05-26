@@ -6,11 +6,14 @@
   <title>Saccadic — Speed Reading, Your Way</title>
   <meta name="description" content="Paste any text and read it one word at a time at your own pace — paste mode, voice input, save your books and pick up where you left off." />
 
-  <!-- Theme: prevent flash of wrong theme -->
+  <!-- Theme + custom ORP color: prevent flash of wrong values.
+       Key strings must match THEME_KEY / ORP_COLOR_KEY in src/themes/themes.js. -->
   <script>
     (function() {
-      const saved = localStorage.getItem('saccadic-theme');
-      if (saved) document.documentElement.setAttribute('data-theme', saved);
+      var savedTheme = localStorage.getItem('saccadic-theme');
+      if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+      var savedOrp = localStorage.getItem('saccadic-orp-color');
+      if (savedOrp) document.documentElement.style.setProperty('--sacc-orp', savedOrp);
     })();
   </script>
 
