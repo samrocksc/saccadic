@@ -48,7 +48,7 @@ class SavedBooksPanel extends LitElement {
       width: min(380px, 92vw);
       height: 100%;
       background: var(--sacc-surface, #161b22);
-      border-left: 1px solid var(--sacc-border, #30363d);
+      border-left: var(--sacc-border-width, 1px) solid var(--sacc-border, #30363d);
       display: flex;
       flex-direction: column;
       gap: 0;
@@ -105,8 +105,8 @@ class SavedBooksPanel extends LitElement {
 
     .book-card {
       padding: 0.875rem 1rem;
-      border: 1px solid var(--sacc-border, #30363d);
-      border-radius: 8px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border, #30363d);
+      border-radius: var(--sacc-radius, 8px);
       background: var(--sacc-bg, #0d1117);
       cursor: pointer;
       transition: border-color 120ms ease, background 120ms ease;
@@ -211,8 +211,8 @@ class SavedBooksPanel extends LitElement {
       font-size: 0.8125rem;
       color: var(--sacc-text, #e6edf3);
       background: var(--sacc-bg, #0d1117);
-      border: 1px solid var(--sacc-border, #30363d);
-      border-radius: 6px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border, #30363d);
+      border-radius: var(--sacc-radius, 6px);
       outline: none;
       box-sizing: border-box;
       transition: border-color 150ms ease;
@@ -229,8 +229,8 @@ class SavedBooksPanel extends LitElement {
       font-family: var(--sacc-font, monospace);
       font-size: 0.8125rem;
       font-weight: 700;
-      border: none;
-      border-radius: 6px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-accent, #ff4444);
+      border-radius: var(--sacc-radius, 6px);
       cursor: pointer;
       background: var(--sacc-accent, #ff4444);
       color: #fff;
@@ -273,9 +273,9 @@ class SavedBooksPanel extends LitElement {
       font-family: var(--sacc-font, monospace);
       font-size: 0.8125rem;
       font-weight: 600;
-      border-radius: 6px;
+      border-radius: var(--sacc-radius, 6px);
       cursor: pointer;
-      border: 1px solid var(--sacc-border, #30363d);
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border, #30363d);
       background: transparent;
       color: var(--sacc-text, #e6edf3);
       transition: background 120ms ease;

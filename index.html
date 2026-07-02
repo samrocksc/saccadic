@@ -10,14 +10,15 @@
   <script>
     (function() {
       const saved = localStorage.getItem('saccadic-theme');
-      if (saved) document.documentElement.setAttribute('data-theme', saved);
+      const theme = saved || 'cowabunga';
+      document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
 
-  <!-- Google Font: JetBrains Mono -->
+  <!-- Google Fonts: Cowabunga theme -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
 
   <style>
     /* ── Reset ──────────────────────────────── */
@@ -25,17 +26,17 @@
 
     /* ── CSS Custom Properties (base defaults — themes override) ── */
     :root {
-      --sacc-font: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+      --sacc-font: 'IBM Plex Mono', 'Space Mono', 'Fira Mono', 'Cascadia Code', monospace;
 
-      /* Dark theme defaults (matches THEMES.dark) */
-      --sacc-bg:      #0d1117;
-      --sacc-text:    #e6edf3;
-      --sacc-accent:  #ff4444;
-      --sacc-muted:   #7d8590;
-      --sacc-surface: #161b22;
-      --sacc-border:  #30363d;
-      --sacc-line:    #444d56;
-      --sacc-orp:     #ff4444;
+      /* Cowabunga theme defaults */
+      --sacc-bg:      #ffffff;
+      --sacc-text:    #000000;
+      --sacc-accent:  #ff00ff;
+      --sacc-muted:   #666666;
+      --sacc-surface: #f5f5f5;
+      --sacc-border:  #000000;
+      --sacc-line:    #000000;
+      --sacc-orp:     #ff00ff;
     }
 
     /* ── Global ────────────────────────────── */
@@ -52,6 +53,10 @@
       transition: background 200ms ease, color 200ms ease;
     }
 
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Space Mono', var(--sacc-font);
+    }
+
     /* Custom scrollbar */
     ::-webkit-scrollbar       { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--sacc-bg); }
@@ -60,8 +65,8 @@
 
     /* Text selection */
     ::selection {
-      background: color-mix(in srgb, var(--sacc-accent) 30%, transparent);
-      color: var(--sacc-text);
+      background: var(--sacc-accent);
+      color: #ffffff;
     }
 
     /* Focus visible */
@@ -94,6 +99,16 @@
     button, [role="button"] {
       min-height: 44px;
       min-width: 44px;
+    }
+
+    /* ── Cowabunga retro styling ───────────────────────────── */
+    [data-theme="cowabunga"] saccadic-app::part(container),
+    [data-theme="cowabunga"] .controls-area {
+      /* components render in shadow DOM, so we style host-level chrome below */
+    }
+
+    [data-theme="cowabunga"] ::-webkit-scrollbar-thumb {
+      background: #000000;
     }
   </style>
   <!-- Google tag (gtag.js) -->

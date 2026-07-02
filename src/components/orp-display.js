@@ -66,12 +66,13 @@ class OrpDisplay extends LitElement {
       position: relative;
       display: flex;
       align-items: center;
-      font-family: var(--sacc-font, 'JetBrains Mono', 'Fira Mono', monospace);
+      font-family: 'Space Mono', var(--sacc-font, 'JetBrains Mono', 'Fira Mono', monospace);
       font-size: clamp(2rem, 8vw, 4rem);
       font-weight: 700;
       color: var(--sacc-text, #e6edf3);
       letter-spacing: 0.05em;
       white-space: nowrap;
+      text-shadow: var(--sacc-shadow, none);
     }
 
     /* Each letter wrapped for individual styling */

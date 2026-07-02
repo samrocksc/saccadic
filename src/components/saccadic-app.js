@@ -50,7 +50,7 @@ class SaccadicApp extends LitElement {
       text-align: left;
     }
     header h1 {
-      font-family: var(--sacc-font, monospace);
+      font-family: 'Space Mono', var(--sacc-font, monospace);
       font-size: clamp(1.25rem, 5vw, 1.75rem);
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -75,8 +75,8 @@ class SaccadicApp extends LitElement {
       font-size: 0.75rem;
       font-weight: 600;
       padding: 0.35rem 0.85rem;
-      border: 1px solid var(--sacc-border);
-      border-radius: 6px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 6px);
       background: transparent;
       color: var(--sacc-muted);
       cursor: pointer;
@@ -106,6 +106,11 @@ class SaccadicApp extends LitElement {
       width: 100%;
       max-width: 640px;
       margin: 0 auto;
+      padding: 1.25rem;
+      background: var(--sacc-surface);
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      box-shadow: var(--sacc-shadow, none);
+      border-radius: var(--sacc-radius, 8px);
     }
 
     /* Attribution */
@@ -422,7 +427,9 @@ class SaccadicApp extends LitElement {
       <saved-books-panel></saved-books-panel>
 
       <footer>
-        <a href="https://github.com/samrocksc/saccadic" target="_blank" rel="noopener">saccadic</a>
+        <a href="https://cowabunga.dev/" target="_blank" rel="noopener">cowabunga.dev</a>
+        ·
+        <a href="https://github.com/samrocksc/saccadic" target="_blank" rel="noopener">source</a>
       </footer>
     `;
   }

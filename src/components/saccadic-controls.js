@@ -34,8 +34,8 @@ class SaccadicControls extends LitElement {
       align-items: center;
       justify-content: center;
       gap: 0;
-      border: 1px solid var(--sacc-border);
-      border-radius: 8px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 8px);
       overflow: hidden;
       width: 100%;
       max-width: 280px;
@@ -77,8 +77,8 @@ class SaccadicControls extends LitElement {
       line-height: 1.6;
       color: var(--sacc-text);
       background: var(--sacc-surface);
-      border: 1px solid var(--sacc-border);
-      border-radius: 8px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 8px);
       resize: vertical;
       box-sizing: border-box;
       outline: none;
@@ -98,8 +98,8 @@ class SaccadicControls extends LitElement {
       align-items: center;
       gap: 0.75rem;
       padding: 1.5rem;
-      border: 1px solid var(--sacc-border);
-      border-radius: 8px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 8px);
       background: var(--sacc-surface);
       min-height: 120px;
       justify-content: center;
@@ -109,8 +109,8 @@ class SaccadicControls extends LitElement {
       font-size: 1rem;
       font-weight: 700;
       padding: 0.75rem 2.5rem;
-      border: 2px solid var(--sacc-accent);
-      border-radius: 999px;
+      border: var(--sacc-border-width, 2px) solid var(--sacc-accent);
+      border-radius: var(--sacc-radius, 999px);
       cursor: pointer;
       background: transparent;
       color: var(--sacc-accent);
@@ -202,10 +202,10 @@ class SaccadicControls extends LitElement {
       font-size: 0.875rem;
       font-weight: 600;
       padding: 0.5rem 1.25rem;
-      border: 1px solid var(--sacc-border);
-      border-radius: 6px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 6px);
       cursor: pointer;
-      transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+      transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease, color 120ms ease;
       line-height: 1.4;
     }
 
@@ -258,12 +258,13 @@ class SaccadicControls extends LitElement {
     }
 
     .theme-btn {
-      padding: 0.3rem 0.6rem;
-      font-size: 0.75rem;
-      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.6875rem;
+      border-radius: var(--sacc-radius, 4px);
       background: transparent;
       color: var(--sacc-muted);
-      border: 1px solid var(--sacc-border);
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      white-space: nowrap;
     }
     .theme-btn.active {
       color: var(--sacc-accent);

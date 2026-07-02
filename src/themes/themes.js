@@ -5,6 +5,21 @@
  */
 
 export const THEMES = {
+  cowabunga: {
+    id: 'cowabunga',
+    name: 'Cowabunga',
+    '--sacc-bg': '#ffffff',
+    '--sacc-text': '#000000',
+    '--sacc-accent': '#ff00ff',
+    '--sacc-muted': '#666666',
+    '--sacc-surface': '#f5f5f5',
+    '--sacc-border': '#000000',
+    '--sacc-line': '#000000',
+    '--sacc-orp': '#ff00ff',
+    '--sacc-shadow': '4px 4px 0px #ff00ff',
+    '--sacc-radius': '0px',
+    '--sacc-border-width': '2px',
+  },
   dark: {
     id: 'dark',
     name: 'Dark',
@@ -16,6 +31,9 @@ export const THEMES = {
     '--sacc-border': '#30363d',
     '--sacc-line': '#444d56',
     '--sacc-orp': '#ff4444',
+    '--sacc-shadow': 'none',
+    '--sacc-radius': '8px',
+    '--sacc-border-width': '1px',
   },
   light: {
     id: 'light',
@@ -28,6 +46,9 @@ export const THEMES = {
     '--sacc-border': '#d0d7de',
     '--sacc-line': '#afb8c1',
     '--sacc-orp': '#cc2222',
+    '--sacc-shadow': 'none',
+    '--sacc-radius': '8px',
+    '--sacc-border-width': '1px',
   },
   highContrast: {
     id: 'highContrast',
@@ -40,10 +61,13 @@ export const THEMES = {
     '--sacc-border': '#555555',
     '--sacc-line': '#888888',
     '--sacc-orp': '#ffcc00',
+    '--sacc-shadow': 'none',
+    '--sacc-radius': '0px',
+    '--sacc-border-width': '2px',
   },
   deuteranopia: {
     id: 'deuteranopia',
-    name: 'Colorblind (Deuteranopia)',
+    name: 'Deuteranopia',
     '--sacc-bg': '#1a1a2e',
     '--sacc-text': '#e0e0e0',
     '--sacc-accent': '#00b4d8',
@@ -52,10 +76,13 @@ export const THEMES = {
     '--sacc-border': '#2a2a4a',
     '--sacc-line': '#5a5a8a',
     '--sacc-orp': '#00b4d8',
+    '--sacc-shadow': 'none',
+    '--sacc-radius': '8px',
+    '--sacc-border-width': '1px',
   },
 };
 
-export const DEFAULT_THEME = 'dark';
+export const DEFAULT_THEME = 'cowabunga';
 
 class ThemeManager {
   constructor() {
@@ -87,12 +114,12 @@ class ThemeManager {
     if (saved && THEMES[saved]) {
       this.apply(saved);
     } else {
-      this.applySystem();
+      this.apply(DEFAULT_THEME);
     }
     // Re-apply on system theme change
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (!localStorage.getItem('saccadic-theme')) {
-        this.applySystem();
+        this.apply(DEFAULT_THEME);
       }
     });
   }
