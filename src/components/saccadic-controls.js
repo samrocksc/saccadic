@@ -277,24 +277,24 @@ class SaccadicControls extends LitElement {
       /* Native color input — minimal styling */
       width: 44px;
       height: 44px;
-      border: 1px solid var(--sacc-border);
-      border-radius: 4px;
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
+      border-radius: var(--sacc-radius, 4px);
       padding: 0;
       background: transparent;
       cursor: pointer;
       overflow: hidden;
     }
     .orp-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
-    .orp-color-input::-webkit-color-swatch { border: none; border-radius: 2px; }
-    .orp-color-input::-moz-color-swatch { border: none; border-radius: 2px; }
+    .orp-color-input::-webkit-color-swatch { border: none; border-radius: var(--sacc-radius, 2px); }
+    .orp-color-input::-moz-color-swatch { border: none; border-radius: var(--sacc-radius, 2px); }
     .orp-color-reset {
       min-height: 44px;
       padding: 0.4rem 0.75rem;
       font-size: 0.6875rem;
-      border-radius: 4px;
+      border-radius: var(--sacc-radius, 4px);
       background: transparent;
       color: var(--sacc-muted);
-      border: 1px solid var(--sacc-border);
+      border: var(--sacc-border-width, 1px) solid var(--sacc-border);
     }
     .orp-color-reset:hover:not(:disabled) {
       color: var(--sacc-text);
