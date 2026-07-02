@@ -5,7 +5,7 @@
  */
 
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js';
-import { SaccadicReader } from '../utils/reader.js';
+import { SaccadicReader, DEFAULT_WPM } from '../utils/reader.js';
 import { SpeechRecognizer, isSpeechSupported } from '../utils/speech.js';
 import { saveBook, updateBookmark, deleteBook, getBook } from '../utils/store.js';
 import { themeManager } from '../themes/themes.js';
@@ -22,6 +22,8 @@ class SaccadicApp extends LitElement {
     _total:     { type: Number,  state: true },
     _hasText:   { type: Boolean, state: true },
     _theme:     { type: String,  state: true },
+    _orpColor:  { type: String,  state: true },
+    _orpCustom: { type: Boolean, state: true },
     _mode:      { type: String,  state: true },  // 'paste' | 'speak'
     _listening: { type: Boolean, state: true },
     _transcript:{ type: String,  state: true },
@@ -132,13 +134,15 @@ class SaccadicApp extends LitElement {
 
   constructor() {
     super();
-    this._wpm        = 250;
+    this._wpm        = DEFAULT_WPM;
     this._playing    = false;
     this._word       = '';
     this._index      = 0;
     this._total      = 0;
     this._hasText    = false;
     this._theme      = 'dark';
+    this._orpColor   = '#ff4444';
+    this._orpCustom  = false;
     this._mode       = 'paste';
     this._listening  = false;
     this._transcript = '';
@@ -156,6 +160,7 @@ class SaccadicApp extends LitElement {
     super.connectedCallback();
     themeManager.init();
     this._theme = themeManager.current;
+    this._syncOrpFromManager();
     this._reader.attachKeyboard();
     if (isSpeechSupported) {
       try {
@@ -312,6 +317,55 @@ class SaccadicApp extends LitElement {
     const { theme } = e.detail;
     themeManager.apply(theme);
     this._theme = theme;
+    // Theme apply preserves custom orp, but the *theme accent* (used as the fallback
+    // shown in the picker when no override exists) just changed — refresh picker state.
+    this._syncOrpFromManager();
+  }
+
+  _onOrpColorChange(e) {
+    const { color } = e.detail;
+    themeManager.setCustomOrpColor(color);
+    this._orpColor = color;
+    this._orpCustom = true;
+  }
+
+  _onOrpColorReset() {
+    themeManager.clearCustomOrpColor();
+    this._syncOrpFromManager();
+  }
+
+  /** Pull current orp color + custom flag from the theme manager into local state. */
+  _syncOrpFromManager() {
+    const custom = themeManager.customOrpColor;
+    if (custom) {
+      this._orpColor = custom;
+      this._orpCustom = true;
+    } else {
+      // Read theme's accent from computed --sacc-orp on :root
+      const computed = getComputedStyle(document.documentElement)
+        .getPropertyValue('--sacc-orp')
+        .trim();
+      this._orpColor = this._toHex(computed) || '#ff4444';
+      this._orpCustom = false;
+    }
+  }
+
+  /** Best-effort normalize any CSS color to a 6-char hex (#rrggbb) for <input type="color">. */
+  _toHex(color) {
+    if (!color) return null;
+    if (/^#[0-9a-fA-F]{6}$/.test(color)) return color.toLowerCase();
+    // Resolve named/rgb via a sacrificial element
+    const probe = document.createElement('span');
+    probe.style.color = color;
+    document.body.appendChild(probe);
+    const rgb = getComputedStyle(probe).color; // "rgb(r, g, b)" or "rgba(r,g,b,a)"
+    probe.remove();
+    const m = rgb.match(/\d+/g);
+    if (!m || m.length < 3) return null;
+    const hex = '#' + [m[0], m[1], m[2]]
+      .map(n => Number(n).toString(16).padStart(2, '0'))
+      .join('');
+    return hex;
   }
 
   _onModeChange(e) {
@@ -413,6 +467,8 @@ class SaccadicApp extends LitElement {
           .playing=${this._playing}
           .hasText=${this._hasText}
           .theme=${this._theme}
+          .orpColor=${this._orpColor}
+          .orpCustom=${this._orpCustom}
           @text-changed=${this._onTextChanged}
           @wpm-changed=${this._onWpmChanged}
           @play-pause=${this._onPlayPause}
@@ -421,6 +477,8 @@ class SaccadicApp extends LitElement {
           @theme-change=${this._onThemeChange}
           @mode-change=${this._onModeChange}
           @listen-click=${this._onListenClick}
+          @orp-color-change=${this._onOrpColorChange}
+          @orp-color-reset=${this._onOrpColorReset}
         ></saccadic-controls>
       </div>
 

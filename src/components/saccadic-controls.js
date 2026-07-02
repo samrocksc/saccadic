@@ -15,6 +15,8 @@ class SaccadicControls extends LitElement {
     playing:       { type: Boolean },
     hasText:       { type: Boolean },
     theme:         { type: String },
+    orpColor:      { type: String },   // current --sacc-orp color (hex string like "#ff4444")
+    orpCustom:     { type: Boolean },  // true if user has set a custom override
     _mode:         { type: String, state: true },  // 'paste' | 'speak'
     _listening:    { type: Boolean, state: true },
     _transcript:   { type: String, state: true },
@@ -255,6 +257,48 @@ class SaccadicControls extends LitElement {
       align-items: center;
       gap: 0.5rem;
       justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    /* Highlight color picker */
+    .orp-color-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .orp-color-row label {
+      font-size: 0.6875rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .orp-color-input {
+      /* Native color input — minimal styling */
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--sacc-border);
+      border-radius: 4px;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .orp-color-input::-webkit-color-swatch-wrapper { padding: 2px; }
+    .orp-color-input::-webkit-color-swatch { border: none; border-radius: 2px; }
+    .orp-color-input::-moz-color-swatch { border: none; border-radius: 2px; }
+    .orp-color-reset {
+      min-height: 44px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.6875rem;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--sacc-muted);
+      border: 1px solid var(--sacc-border);
+    }
+    .orp-color-reset:hover:not(:disabled) {
+      color: var(--sacc-text);
+      border-color: var(--sacc-muted);
     }
 
     .theme-btn {
@@ -346,6 +390,11 @@ class SaccadicControls extends LitElement {
         padding: 0.25rem 0.5rem;
       }
 
+      /* Color picker row: center on mobile like the theme row */
+      .orp-color-row {
+        justify-content: center;
+      }
+
       /* Keyboard hints hidden on mobile (space bar doesn't apply) */
       .hint {
         display: none;
@@ -359,6 +408,8 @@ class SaccadicControls extends LitElement {
     this.playing    = false;
     this.hasText    = false;
     this.theme      = 'dark';
+    this.orpColor   = '#ff4444';
+    this.orpCustom  = false;
     this._mode      = 'paste';
     this._listening = false;
     this._transcript = '';
@@ -401,6 +452,14 @@ class SaccadicControls extends LitElement {
     if (mode === this._mode) return;
     this._mode = mode;
     this._dispatch('mode-change', { mode });
+  }
+
+  _onOrpColorChange(e) {
+    this._dispatch('orp-color-change', { color: e.target.value });
+  }
+
+  _onOrpColorReset() {
+    this._dispatch('orp-color-reset');
   }
 
   _onListenClick() {
@@ -465,7 +524,7 @@ class SaccadicControls extends LitElement {
         </div>
       ` : ''}
 
-      <!-- WPM slider -->
+      <!-- WPM slider — step=5 keeps drag-precision while never snapping away from z/x keyboard values (which step by WPM_STEP=25). -->
       <div class="slider-row">
         <label for="wpm-slider">WPM</label>
         <input
@@ -473,7 +532,7 @@ class SaccadicControls extends LitElement {
           type="range"
           min=${MIN_WPM}
           max=${MAX_WPM}
-          step="10"
+          step="5"
           .value=${String(this.wpm)}
           @input=${this._onSlider}
           aria-label="Words per minute"
@@ -530,6 +589,27 @@ class SaccadicControls extends LitElement {
             title=${t.name}
           >${t.name}</button>
         `)}
+      </div>
+
+      <!-- ORP highlight color picker -->
+      <div class="orp-color-row">
+        <label for="orp-color">Highlight</label>
+        <input
+          id="orp-color"
+          class="orp-color-input"
+          type="color"
+          .value=${this.orpColor}
+          @input=${this._onOrpColorChange}
+          aria-label="ORP highlight color"
+          title="Pick a custom highlight color for the focal letter"
+        />
+        <button
+          class="orp-color-reset"
+          @click=${this._onOrpColorReset}
+          ?disabled=${!this.orpCustom}
+          aria-label="Reset highlight color to theme default"
+          title="Reset to theme default"
+        >Reset</button>
       </div>
 
       <!-- Keyboard hints -->
