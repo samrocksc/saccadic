@@ -12,11 +12,36 @@ export const MIN_WPM = 150;
 export const MAX_WPM = 500;
 export const WPM_STEP = 25;
 
+// User-global WPM preference (issue #7). Same naming family as
+// 'saccadic-theme' / 'saccadic-orp-color' / 'saccadic-books'.
+const WPM_KEY = 'saccadic-wpm';
+
+/** Restore saved WPM, clamped to [MIN_WPM, MAX_WPM]. DEFAULT_WPM if absent or invalid. */
+export function loadSavedWpm() {
+  try {
+    const raw = localStorage.getItem(WPM_KEY);
+    if (raw === null) return DEFAULT_WPM;
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return DEFAULT_WPM;
+    return Math.max(MIN_WPM, Math.min(n, MAX_WPM));
+  } catch {
+    return DEFAULT_WPM; // storage blocked (private mode etc.) — non-fatal
+  }
+}
+
+function saveWpm(wpm) {
+  try {
+    localStorage.setItem(WPM_KEY, String(wpm));
+  } catch {
+    /* storage unavailable — reading still works, preference just won't stick */
+  }
+}
+
 export class SaccadicReader {
   constructor() {
     this._words = [];
     this._currentIndex = 0;
-    this._wpm = DEFAULT_WPM;
+    this._wpm = loadSavedWpm(); // user's preferred speed survives sessions (issue #7)
     this._playing = false;
     this._timerId = null;
     this._onWord = null;      // callback(index, word)
@@ -98,18 +123,21 @@ export class SaccadicReader {
   /** Speed up by WPM_STEP. */
   speedUp() {
     this._wpm = Math.min(this._wpm + WPM_STEP, MAX_WPM);
+    saveWpm(this._wpm);
     return this._wpm;
   }
 
   /** Speed down by WPM_STEP. */
   speedDown() {
     this._wpm = Math.max(this._wpm - WPM_STEP, MIN_WPM);
+    saveWpm(this._wpm);
     return this._wpm;
   }
 
   /** Set WPM directly. Clamped to [MIN_WPM, MAX_WPM]. */
   setWpm(wpm) {
     this._wpm = Math.max(MIN_WPM, Math.min(wpm, MAX_WPM));
+    saveWpm(this._wpm);
     return this._wpm;
   }
 

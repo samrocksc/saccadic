@@ -151,6 +151,7 @@ class SaccadicApp extends LitElement {
     this._bookmarkDirty = false;
 
     this._reader = new SaccadicReader();
+    this._wpm = this._reader.wpm; // reader restores saved WPM preference (issue #7)
     this._speech = null;
     this._accumulatedText = '';
     this._setupReaderCallbacks();

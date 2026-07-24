@@ -21,7 +21,7 @@ python3 -m http.server 8000
 - **Speak mode** — read aloud or dictate, the words stream as you talk (Chrome / Edge / Safari, via Web Speech API)
 - **ORP (Optimal Recognition Point)** — focal letter highlighted, with vertical guide and horizontal lines so your eye doesn't drift
 - **Customizable highlight color** — pick any color; persists across sessions
-- **WPM 150 → 500** — start at 8th-grade reading pace, work up to trained-speed-reader territory
+- **WPM 150 → 500** — start at 8th-grade reading pace, work up to trained-speed-reader territory; your last speed is remembered across sessions
 - **Saved books** — keep texts in `localStorage` with auto-bookmarking; resume where you left off
 - **Themes** — dark, light, high contrast, deuteranopia-friendly; extensible (see `src/themes/themes.js`)
 - **Mobile-friendly** — touch targets, 2×2 button grid on small screens, no pull-to-refresh hijack
