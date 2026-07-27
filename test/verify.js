@@ -208,6 +208,25 @@ const q = `document.querySelector('saccadic-app').shadowRoot`;
     return ok;
   }));
 
+  // ---- first run must follow the OS preference (fresh profile, no storage) ----
+  const freshCheck = async (scheme) => {
+    const c = await browser.newContext({ viewport: { width: 900, height: 700 }, colorScheme: scheme });
+    const p = await c.newPage();
+    await p.goto(base, { waitUntil: 'networkidle' });
+    await p.waitForTimeout(700);
+    const out = await p.evaluate(() => ({
+      choice: document.documentElement.getAttribute('data-theme-choice'),
+      resolved: document.documentElement.getAttribute('data-theme'),
+    }));
+    await c.close();
+    return out;
+  };
+  const fDark = await freshCheck('dark');
+  const fLight = await freshCheck('light');
+  check('first run follows the OS preference',
+    fDark.choice === 'system' && fDark.resolved === 'dark' && fLight.resolved === 'light',
+    `dark->${fDark.resolved} light->${fLight.resolved}`);
+
   // ---- live transcription must not rewind the reader ----
   const append = await page.evaluate(qs => {
     const rd = eval(qs).host._reader;

@@ -92,7 +92,12 @@ export const THEMES = {
   },
 };
 
-export const DEFAULT_THEME = 'cowabunga';
+/**
+ * First-run default. 'system' follows the OS light/dark preference, per the
+ * project brief; every other theme (including Cowabunga) is one click away and
+ * is remembered once chosen.
+ */
+export const DEFAULT_THEME = 'system';
 
 /**
  * Register an additional theme at runtime.

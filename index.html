@@ -20,7 +20,8 @@
         savedOrp = localStorage.getItem('saccadic-orp-color');
       } catch (e) {}
 
-      var choice = savedTheme || 'cowabunga';
+      // Must match DEFAULT_THEME in src/themes/themes.js.
+      var choice = savedTheme || 'system';
       var resolved = choice;
       if (choice === 'system') {
         resolved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
