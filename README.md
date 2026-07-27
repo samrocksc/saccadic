@@ -8,6 +8,8 @@ No accounts and no server-side storage — everything you read or save stays in 
 
 ## Run it
 
+**Live: <https://samrocksc.github.io/saccadic/>**
+
 There is no build step. Open `index.html` in any modern browser, or serve the folder:
 
 ```sh
