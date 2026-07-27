@@ -23,7 +23,7 @@ python3 -m http.server 8000
 - **Customizable highlight color** — pick any color; persists across sessions
 - **WPM 150 → 500** — start at 8th-grade reading pace, work up to trained-speed-reader territory; your last speed is remembered across sessions
 - **Saved books** — keep texts in `localStorage` with auto-bookmarking; resume where you left off
-- **Themes** — dark, light, high contrast, deuteranopia-friendly; extensible (see `src/themes/themes.js`)
+- **Themes** — dark, light, system (follows your OS), high contrast, deuteranopia-friendly; extensible (see `src/themes/themes.js`)
 - **Mobile-friendly** — touch targets, 2×2 button grid on small screens, no pull-to-refresh hijack
 
 ## Keyboard shortcuts
@@ -33,6 +33,20 @@ python3 -m http.server 8000
 | `Space` | Play / Pause    |
 | `Z`     | Speed up (+25)  |
 | `X`     | Slow down (-25) |
+
+Shortcuts are ignored while you are typing in a text field, so you can paste and
+edit freely without the reader hijacking your keystrokes.
+
+## Tests
+
+The app has no build step, but the verification suite drives it in a real
+browser (Playwright + Chromium) and checks ORP placement, the focal indicator,
+keyboard shortcuts, theming, transcription, mobile layout and accessibility:
+
+```sh
+npm i -D playwright && npx playwright install chromium
+node test/verify.js
+```
 
 ## Tech stack
 

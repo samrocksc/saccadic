@@ -6,14 +6,28 @@
   <title>Saccadic — Speed Reading, Your Way</title>
   <meta name="description" content="Paste any text and read it one word at a time at your own pace — paste mode, voice input, save your books and pick up where you left off." />
 
+  <!-- Inline SVG favicon: the app's own focal mark (guide lines + ORP tick). -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23fff'/%3E%3Crect y='6' width='32' height='2' fill='%23000'/%3E%3Crect y='24' width='32' height='2' fill='%23000'/%3E%3Crect x='15' y='8' width='2' height='5' fill='%23f0f'/%3E%3Crect x='15' y='19' width='2' height='5' fill='%23f0f'/%3E%3Ctext x='16' y='20' font-family='monospace' font-size='12' font-weight='700' text-anchor='middle' fill='%23000'%3Ea%3C/text%3E%3C/svg%3E" />
+
   <!-- Theme + custom ORP color: prevent flash of wrong values.
        Key strings must match THEME_KEY / ORP_COLOR_KEY in src/themes/themes.js. -->
   <script>
     (function() {
-      var savedTheme = localStorage.getItem('saccadic-theme');
-      var theme = savedTheme || 'cowabunga';
-      document.documentElement.setAttribute('data-theme', theme);
-      var savedOrp = localStorage.getItem('saccadic-orp-color');
+      // localStorage throws in private mode / when site data is blocked.
+      var savedTheme = null, savedOrp = null;
+      try {
+        savedTheme = localStorage.getItem('saccadic-theme');
+        savedOrp = localStorage.getItem('saccadic-orp-color');
+      } catch (e) {}
+
+      var choice = savedTheme || 'cowabunga';
+      var resolved = choice;
+      if (choice === 'system') {
+        resolved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', resolved);
+      document.documentElement.setAttribute('data-theme-choice', choice);
       if (savedOrp) document.documentElement.style.setProperty('--sacc-orp', savedOrp);
     })();
   </script>
@@ -112,6 +126,18 @@
 
     [data-theme="cowabunga"] ::-webkit-scrollbar-thumb {
       background: #000000;
+    }
+
+    /* ── Reduced motion ─────────────────────────────────────
+       RSVP is a rapid-flashing interface; honour the OS request to
+       tone movement down rather than only easing colour transitions. */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
   <!-- Google tag (gtag.js) -->

@@ -23,6 +23,28 @@ class SaccadicControls extends LitElement {
   };
 
   static styles = css`
+    /* The reset in index.html cannot cross the shadow boundary, so padded,
+       width:100% elements in here fall back to content-box and overflow the
+       viewport on narrow screens. Re-declare it per shadow root. */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Touch targets. The 44px floor in index.html is light-DOM only and never
+       reached these buttons. Primary actions get it unconditionally; the dense
+       theme chips get it only on touch devices, where fingers need the room. */
+    button {
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    .theme-btn { min-height: 32px; }
+
+    @media (pointer: coarse) {
+      .theme-btn {
+        min-height: 44px;
+        padding-inline: 0.75rem;
+      }
+      input[type="color"] { min-height: 44px; min-width: 44px; }
+    }
+
     :host {
       display: flex;
       flex-direction: column;

@@ -1,7 +1,11 @@
 /**
  * Theme system for Saccadic.
- * Uses CSS custom properties applied to :root.
- * Themes are extensible — add any theme ID + config object.
+ *
+ * Themes are plain objects of CSS custom properties applied to :root, so
+ * adding one is a data change, not a code change — see registerTheme().
+ *
+ * 'system' is a pseudo-theme: it holds no colours of its own and instead
+ * resolves to `dark` or `light` from the OS preference, tracking it live.
  */
 
 export const THEMES = {
@@ -50,6 +54,12 @@ export const THEMES = {
     '--sacc-radius': '8px',
     '--sacc-border-width': '1px',
   },
+  system: {
+    id: 'system',
+    name: 'System',
+    // Resolved at apply() time to `dark` or `light`.
+    resolves: true,
+  },
   highContrast: {
     id: 'highContrast',
     name: 'High Contrast',
@@ -84,29 +94,85 @@ export const THEMES = {
 
 export const DEFAULT_THEME = 'cowabunga';
 
+/**
+ * Register an additional theme at runtime.
+ * @param {{id: string, name: string} & Record<string, string>} theme
+ */
+export function registerTheme(theme) {
+  if (!theme?.id) throw new Error('registerTheme: theme.id is required');
+  THEMES[theme.id] = theme;
+  return THEMES[theme.id];
+}
+
 // localStorage keys — these literals are also referenced by the inline
 // pre-paint script in index.html. Keep both in sync.
 const THEME_KEY = 'saccadic-theme';
 const ORP_COLOR_KEY = 'saccadic-orp-color';
 
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+
+/**
+ * localStorage throws outright in Safari private mode and when a browser is
+ * configured to block site data. Theme init runs during connectedCallback, so
+ * an unguarded throw there takes the whole app down instead of costing a
+ * saved preference.
+ */
+const storage = {
+  get(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, val); return true; } catch { return false; }
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); return true; } catch { return false; }
+  },
+};
+
+function prefersDark() {
+  return typeof window.matchMedia === 'function' && window.matchMedia(DARK_QUERY).matches;
+}
+
 class ThemeManager {
   constructor() {
-    this._current = DEFAULT_THEME;
-    this._customOrp = null; // user override; null = use theme default
+    this._current = DEFAULT_THEME;   // what the user picked (may be 'system')
+    this._resolved = DEFAULT_THEME;  // the concrete theme actually painted
+    this._customOrp = null;          // user override; null = use theme default
+    this._mediaBound = false;
   }
 
-  /** Apply a theme by ID. Updates CSS custom properties on :root. */
-  apply(themeId) {
-    const theme = THEMES[themeId];
+  /** Resolve a possibly-virtual theme id to a concrete one. */
+  _resolve(themeId) {
+    if (THEMES[themeId]?.resolves) return prefersDark() ? 'dark' : 'light';
+    return themeId;
+  }
+
+  /**
+   * Apply a theme by ID. Updates CSS custom properties on :root.
+   * @param {string} themeId
+   * @param {{persist?: boolean}} [opts]
+   */
+  apply(themeId, { persist = true } = {}) {
+    if (!THEMES[themeId]) return;
+
+    const resolvedId = this._resolve(themeId);
+    const theme = THEMES[resolvedId];
     if (!theme) return;
+
     const root = document.documentElement;
     Object.entries(theme).forEach(([key, val]) => {
       if (key.startsWith('--')) root.style.setProperty(key, val);
     });
-    root.setAttribute('data-theme', themeId);
+
+    root.setAttribute('data-theme', resolvedId);
+    root.setAttribute('data-theme-choice', themeId);
+
     this._current = themeId;
-    localStorage.setItem(THEME_KEY, themeId);
-    // Re-apply custom ORP color on top — themes shouldn't clobber user preference
+    this._resolved = resolvedId;
+
+    if (persist) storage.set(THEME_KEY, themeId);
+
+    // Re-apply custom ORP colour on top — themes shouldn't clobber user preference
     if (this._customOrp) {
       root.style.setProperty('--sacc-orp', this._customOrp);
     }
@@ -120,44 +186,56 @@ class ThemeManager {
     if (!color) return;
     this._customOrp = color;
     document.documentElement.style.setProperty('--sacc-orp', color);
-    localStorage.setItem(ORP_COLOR_KEY, color);
+    storage.set(ORP_COLOR_KEY, color);
   }
 
   /** Clear the custom ORP color and restore the active theme's accent. */
   clearCustomOrpColor() {
     this._customOrp = null;
-    localStorage.removeItem(ORP_COLOR_KEY);
+    storage.remove(ORP_COLOR_KEY);
     // Re-apply theme to reset --sacc-orp to its theme default
     this.apply(this._current);
   }
 
-  /** Detect system preference and apply. */
+  /** Switch to following the OS light/dark preference. */
   applySystem() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    this.apply(prefersDark ? 'dark' : 'light');
+    this.apply('system');
   }
 
-  /** Restore saved theme + custom ORP color from localStorage, or apply system default. */
+  /** Restore saved theme + custom ORP color from localStorage, or apply the default. */
   init() {
     // Load custom orp first so it survives the initial theme apply
-    const savedOrp = localStorage.getItem(ORP_COLOR_KEY);
+    const savedOrp = storage.get(ORP_COLOR_KEY);
     if (savedOrp) this._customOrp = savedOrp;
 
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved && THEMES[saved]) {
-      this.apply(saved);
-    } else {
-      this.apply(DEFAULT_THEME);
-    }
-    // Re-apply on system theme change
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (!localStorage.getItem(THEME_KEY)) {
-        this.apply(DEFAULT_THEME);
+    const saved = storage.get(THEME_KEY);
+    // Don't persist on init — writing the default back would make it
+    // indistinguishable from a deliberate user choice on the next load.
+    this.apply(saved && THEMES[saved] ? saved : DEFAULT_THEME, { persist: false });
+
+    this._bindSystemListener();
+  }
+
+  /**
+   * Repaint when the OS flips light/dark, but only while the user is actually
+   * on 'system'. The previous guard checked whether a theme was stored at all,
+   * which apply() had already made permanently true — so it never fired.
+   */
+  _bindSystemListener() {
+    if (this._mediaBound || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(DARK_QUERY);
+    const onChange = () => {
+      if (THEMES[this._current]?.resolves) {
+        this.apply(this._current, { persist: false });
       }
-    });
+    };
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
+    else if (typeof mq.addListener === 'function') mq.addListener(onChange); // older Safari
+    this._mediaBound = true;
   }
 
   get current() { return this._current; }
+  get resolved() { return this._resolved; }
   get customOrpColor() { return this._customOrp; }
 }
 

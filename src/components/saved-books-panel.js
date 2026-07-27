@@ -25,6 +25,9 @@ class SavedBooksPanel extends LitElement {
   };
 
   static styles = css`
+    /* Shadow roots don't inherit the light-DOM reset in index.html. */
+    *, *::before, *::after { box-sizing: border-box; }
+
     :host {
       display: block;
       width: 100%;

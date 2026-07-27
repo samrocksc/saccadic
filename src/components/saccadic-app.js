@@ -31,6 +31,9 @@ class SaccadicApp extends LitElement {
   };
 
   static styles = css`
+    /* Shadow roots don't inherit the light-DOM reset in index.html. */
+    *, *::before, *::after { box-sizing: border-box; }
+
     :host {
       display: flex;
       flex-direction: column;
@@ -76,6 +79,8 @@ class SaccadicApp extends LitElement {
       font-family: var(--sacc-font, monospace);
       font-size: 0.75rem;
       font-weight: 600;
+      min-height: 44px;
+      touch-action: manipulation;
       padding: 0.35rem 0.85rem;
       border: var(--sacc-border-width, 1px) solid var(--sacc-border);
       border-radius: var(--sacc-radius, 6px);
@@ -197,11 +202,9 @@ class SaccadicApp extends LitElement {
       .onWord((idx, word) => {
         this._word    = word;
         this._index   = idx;
-        this._playing = true;
         this._autoSaveBookmark();
       })
       .onEnd(() => {
-        this._playing = false;
         this._flushBookmark();
       })
       .onProgress((idx, total) => {
@@ -211,6 +214,20 @@ class SaccadicApp extends LitElement {
         if (idx > 0 && idx % 50 === 0) {
           this._flushBookmark();
         }
+      })
+      // The z/x shortcuts and the slider both funnel through the reader, so the
+      // reader is the single source of truth for speed. Mirroring it back into
+      // component state is what keeps the slider and the readout honest —
+      // without this, keyboard shortcuts silently desync the whole UI.
+      .onWpmChange((wpm) => {
+        this._wpm = wpm;
+      })
+      .onPlayState((playing) => {
+        this._playing = playing;
+        if (!playing) {
+          this._word = this._reader.currentWord || this._word;
+          this._flushBookmark();
+        }
       });
   }
 
@@ -218,11 +235,18 @@ class SaccadicApp extends LitElement {
     if (!this._speech) return;
 
     this._speech.onResult(({ transcript, isFinal }) => {
-      this._transcript = transcript;
-      if (isFinal) {
+      // Interim text is a live preview only — it gets revised as the
+      // recogniser firms up, so it must never reach the word list.
+      this._transcript = isFinal ? '' : transcript;
+      this._requestControlsUpdate({ _transcript: this._transcript });
+
+      if (isFinal && transcript) {
         this._accumulatedText += (this._accumulatedText ? ' ' : '') + transcript;
-        this._transcript = '';
-        this._feedTextToReader(this._accumulatedText);
+        // Append rather than reload. loadText() resets the cursor to word zero
+        // and stops playback, so reloading on every final result made live
+        // transcription restart from the beginning and never play through.
+        this._total = this._reader.appendText(transcript);
+        this._hasText = this._reader.hasText;
       }
     });
 
@@ -245,20 +269,15 @@ class SaccadicApp extends LitElement {
   }
 
   _feedTextToReader(text) {
+    this._reader.loadText(text);
+    // Reloading a saved book resumes at its bookmark; fresh text starts at 0.
     const isReload = this._savedBook !== null;
-    if (isReload) {
-      // Loading a saved book — respect its bookmark
-      this._reader.loadText(text);
-      const startIdx = Math.min(this._savedBook.savedIndex, this._reader.totalWords - 1);
-      this._reader._currentIndex = startIdx;
-      this._reader._words = this._reader._words; // already set by loadText
-    } else {
-      this._reader.loadText(text);
-    }
+    const startIdx = isReload ? this._reader.seek(this._savedBook.savedIndex) : 0;
+
     this._hasText = this._reader.hasText;
     this._total   = this._reader.totalWords;
     this._word    = '';
-    this._index   = isReload ? this._savedBook.savedIndex : 0;
+    this._index   = startIdx;
     this._playing = false;
   }
 
@@ -288,18 +307,14 @@ class SaccadicApp extends LitElement {
   }
 
   _onPlayPause() {
+    // State mirroring happens in the reader's onPlayState callback.
     this._reader.toggle();
-    this._playing = this._reader.playing;
-    if (!this._reader.playing) {
-      this._word = this._reader._words[this._reader._currentIndex] || this._word;
-      this._flushBookmark();
-    }
   }
 
   _onSpeedChange(e) {
     const { delta } = e.detail;
-    if (delta > 0) this._wpm = this._reader.speedUp();
-    else          this._wpm = this._reader.speedDown();
+    if (delta > 0) this._reader.speedUp();
+    else           this._reader.speedDown();
   }
 
   _onReset() {
@@ -397,7 +412,7 @@ class SaccadicApp extends LitElement {
     const suggestedTitle = this._savedBook?.title
       ?? (this._reader.hasText ? `Page ${this._index + 1}` : '');
     const currentText = this._reader.hasText
-      ? this._reader._words.join(' ')
+      ? this._reader.words.join(' ')
       : '';
     this._panelRef.prefillSave(suggestedTitle, currentText);
     this._panelRef.open();
